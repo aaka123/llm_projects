@@ -1,0 +1,1 @@
+ Ingests a long piece of text, such as a news article or a report, and produces a concise, coherent summary
