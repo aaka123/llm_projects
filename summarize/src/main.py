@@ -42,10 +42,25 @@ def write_output_file(response_text):
     except Exception as e:
         logging.error(f"Error writing to file: {e}")
 
+def get_system_prompt():
+    path = get_path_of_file("system_prompt.txt")
+    try:
+        with open(path, "r",encoding="utf-8") as file:
+            system_prompt = file.read()
+    except FileNotFoundError:
+        logging.error(f"File not found: {path}")
+        exit(1)
+    except Exception as e:
+        logging.error(f"Error reading file:{e}")
+        exit(1)
+    if not system_prompt.strip():
+        logging.error("Input file is empty")
+        exit(1)
+    return system_prompt
+
 def run_summarizer(gemini_api_key,model_name):
     genai.configure(api_key = gemini_api_key)
-
-    system_prompt = "You are a highly capable summarization engine. Your task is to extract the most important information and main ideas from any provided text and present them as a concise, accurate, and easy-to-understand summary. Do not add outside information or interpretations. Focus solely on condensing the given content while preserving its core meaning and context."
+    system_prompt =  get_system_prompt()
     model = genai.GenerativeModel(model_name,system_instruction = system_prompt) 
     article = get_input_text()
     response = model.generate_content(article)
