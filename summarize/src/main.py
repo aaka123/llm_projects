@@ -9,31 +9,38 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-def get_path_of_file(file_name):
+def get_path_of_file(file_name: str) -> str:
+    """Returns the full path to a file in the data directory."""
     base_dir = os.path.dirname(__file__)
-    path = os.path.join(base_dir,"..","data",file_name)
+    path = os.path.join(base_dir, "..", "data", file_name)
     return path
 
-def get_input_text():
-    input_path = get_path_of_file("input.txt")
+def read_file_safely(file_path: str, error_context: str) -> str:
+    """Reads a file safely with comprehensive error handling."""
     try:
-        with open(input_path, "r",encoding="utf-8") as file:
-            article = file.read()
+        with open(file_path, "r", encoding="utf-8") as file:
+            content = file.read()
     except FileNotFoundError:
-        logging.error(f"File not found: {input_path}")
+        logging.error(f"File not found: {file_path}")
         exit(1)
     except Exception as e:
-        logging.error(f"Error reading file:{e}")
+        logging.error(f"Error reading {error_context}: {e}")
         exit(1)
-    if not article.strip():
-        logging.error("Input file is empty")
+    if not content.strip():
+        logging.error(f"{error_context} is empty")
         exit(1)
-    return article
+    return content
 
-def write_output_file(response_text):
+def get_input_text() -> str:
+    """Reads and returns the content of the input file."""
+    input_path = get_path_of_file("input.txt")
+    return read_file_safely(input_path, "input file")
+
+def write_output_file(response_text: str) -> None:
+    """Writes the response text to the output file."""
     output_path = get_path_of_file("output.txt")
     try:
-        with open(output_path, "w",encoding="utf-8") as file:
+        with open(output_path, "w", encoding="utf-8") as file:
             file.write(response_text)
         logging.info(f"Summary written to {output_path}")
     except FileNotFoundError:
@@ -41,46 +48,41 @@ def write_output_file(response_text):
         exit(1)
     except Exception as e:
         logging.error(f"Error writing to file: {e}")
+        exit(1)
 
-def get_system_prompt():
+def get_system_prompt() -> str:
+    """Reads and returns the system prompt from file."""
     path = get_path_of_file("system_prompt.txt")
-    try:
-        with open(path, "r",encoding="utf-8") as file:
-            system_prompt = file.read()
-    except FileNotFoundError:
-        logging.error(f"File not found: {path}")
-        exit(1)
-    except Exception as e:
-        logging.error(f"Error reading file:{e}")
-        exit(1)
-    if not system_prompt.strip():
-        logging.error("Input file is empty")
-        exit(1)
-    return system_prompt
+    return read_file_safely(path, "system prompt file")
 
-def run_summarizer(gemini_api_key,model_name):
-    genai.configure(api_key = gemini_api_key)
-    system_prompt =  get_system_prompt()
-    model = genai.GenerativeModel(model_name,system_instruction = system_prompt) 
+def run_summarizer(gemini_api_key: str, model_name: str) -> None:
+    """Runs the summarization process using the specified model and API key."""
+    genai.configure(api_key=gemini_api_key)
+    system_prompt = get_system_prompt()
+    model = genai.GenerativeModel(model_name, system_instruction=system_prompt)
     article = get_input_text()
     response = model.generate_content(article)
-    if response.text :
+    if response.text:
         write_output_file(response.text)
     else:
         logging.error("No summary generated")
         exit(1)
 
-def get_keys(model):
+def get_keys(model: str) -> str:
+    """Gets the API key for the specified model."""
     key_name = get_key_name(model)
     return os.getenv(key_name)
 
-def get_key_name(model):
+def get_key_name(model: str) -> str:
+    """Returns the environment variable name for the specified model's API key."""
     if "gemini" in model:
         return "GEMINI_API_KEY"
+    return ""
 
 def parse_argument():
+    """Parses command line arguments."""
     parser = argparse.ArgumentParser(description="Summarize a text file using Gemini API")
-    parser.add_argument("--model",type=str,default="gemini-2.5-flash",help="Model_name")
+    parser.add_argument("--model", type=str, default="gemini-2.5-flash", help="Model name")
     return parser.parse_args()
 
 if __name__ == "__main__":
@@ -90,4 +92,4 @@ if __name__ == "__main__":
     if not gemini_api_key:
         logging.error("Gemini API key not found. Please set it in your .env file")
         exit(1)
-    run_summarizer(gemini_api_key,args.model)
+    run_summarizer(gemini_api_key, args.model)
